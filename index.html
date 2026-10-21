@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#0f3d5e">
+<title>Check-in partecipanti BPER</title>
+<style>
+  :root {
+    --bg: #f3f5f8;
+    --surface: #ffffff;
+    --text: #17202a;
+    --muted: #5f6b7a;
+    --line: #e1e6ec;
+    --brand: #0f3d5e;
+    --brand-soft: #e6eef5;
+    --ok: #157f4f;
+    --ok-soft: #e3f4ec;
+    --warn: #9a5b00;
+    --warn-soft: #fdf1dc;
+    --mark: #fff0b3;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e141b;
+      --surface: #17202a;
+      --text: #e8edf2;
+      --muted: #98a4b3;
+      --line: #273342;
+      --brand: #7fb6de;
+      --brand-soft: #1c2b3a;
+      --ok: #4cc38a;
+      --ok-soft: #15301f;
+      --warn: #f0b456;
+      --warn-soft: #33270f;
+      --mark: #5a4a10;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  button, input { font: inherit; color: inherit; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+
+  /* Header */
+  header.top {
+    background: #0f3d5e;
+    color: #fff;
+    padding: calc(14px + env(safe-area-inset-top)) 0 14px;
+  }
+  .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .top h1 { font-size: 19px; line-height: 1.2; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  .top .sub { font-size: 13px; opacity: .8; margin-top: 2px; }
+  .counter {
+    flex: none; text-align: right; font-variant-numeric: tabular-nums;
+    background: rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px;
+  }
+  .counter b { font-size: 18px; display: block; line-height: 1.1; }
+  .counter span { font-size: 11px; opacity: .85; text-transform: uppercase; letter-spacing: .04em; }
+  .demo-note {
+    font-size: 12px; background: rgba(255,255,255,.12); border-radius: 8px;
+    padding: 6px 10px; margin-top: 12px; line-height: 1.35;
+  }
+
+  /* Search */
+  .search-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    padding: 12px 0 10px;
+  }
+  .search-box { position: relative; }
+  .search-box svg.lens {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px; color: var(--muted); pointer-events: none;
+  }
+  #q {
+    width: 100%; height: 52px;
+    border: 1.5px solid var(--line); border-radius: var(--radius);
+    background: var(--surface);
+    padding: 0 48px 0 44px;
+    font-size: 17px; /* >= 16px: evita lo zoom automatico su iPhone */
+    outline: none; box-shadow: var(--shadow);
+    -webkit-appearance: none; appearance: none;
+  }
+  #q:focus { border-color: var(--brand); }
+  #q::placeholder { color: var(--muted); }
+  #q::-webkit-search-cancel-button { display: none; }
+  #clear {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 40px; height: 40px; border: 0; background: none; border-radius: 50%;
+    display: none; align-items: center; justify-content: center; color: var(--muted); cursor: pointer;
+  }
+  #clear.show { display: flex; }
+  #clear svg { width: 20px; height: 20px; }
+
+  .suggestions {
+    list-style: none; margin: 8px 0 0; padding: 4px 0;
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+  .suggestions:empty { display: none; }
+  .suggestions li { margin: 0; }
+  .sugg {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    border: 0; background: none; text-align: left; cursor: pointer;
+    padding: 10px 14px; min-height: 56px;
+  }
+  .sugg + .sugg, li + li .sugg { border-top: 1px solid var(--line); }
+  .sugg[aria-selected="true"], .sugg:active { background: var(--brand-soft); }
+  .sugg .who { flex: 1; min-width: 0; display: block; }
+  .sugg .name, .sugg .meta { display: block; }
+  .sugg .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sugg .meta { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .empty {
+    padding: 18px 14px; color: var(--muted); text-align: center; font-size: 15px;
+  }
+
+  .pill {
+    flex: none; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 4px 9px;
+    white-space: nowrap;
+  }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.todo { background: var(--brand-soft); color: var(--muted); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+  .hint { color: var(--muted); font-size: 14px; text-align: center; padding: 28px 12px; }
+  .hint svg { width: 40px; height: 40px; opacity: .5; display: block; margin: 0 auto 8px; }
+
+  /* Scheda */
+  .card {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+    border: 1px solid var(--line); overflow: hidden; margin-bottom: 24px;
+  }
+  .card-head { padding: 18px 18px 14px; display: flex; gap: 12px; align-items: flex-start; }
+  .avatar {
+    flex: none; width: 48px; height: 48px; border-radius: 50%;
+    background: var(--brand-soft); color: var(--brand);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px;
+  }
+  .card-head .title { flex: 1; min-width: 0; }
+  .card-head h2 { margin: 0; font-size: 21px; line-height: 1.2; overflow-wrap: anywhere; }
+  .card-head .status-line { margin-top: 6px; }
+  .fields { margin: 0; padding: 0 18px; }
+  .field { padding: 12px 0; border-top: 1px solid var(--line); }
+  .field dt { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
+  .field dd { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+  .field dd.blank { color: var(--muted); font-style: italic; }
+  .field a.tel {
+    display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-weight: 600;
+    text-decoration: none; font-variant-numeric: tabular-nums; min-height: 32px;
+  }
+  .field a.tel svg { width: 18px; height: 18px; }
+  .lock { font-size: 12px; color: var(--muted); padding: 10px 18px 0; display: flex; gap: 6px; align-items: center; }
+  .lock svg { width: 14px; height: 14px; flex: none; }
+
+  .action { padding: 14px 18px 18px; }
+  .btn-arrive {
+    width: 100%; min-height: 56px; border-radius: 12px; border: 0; cursor: pointer;
+    font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--ok); color: #fff;
+  }
+  @media (prefers-color-scheme: dark) { .btn-arrive { color: #08130d; } }
+  .btn-arrive svg { width: 22px; height: 22px; }
+  .btn-arrive:active { transform: scale(.99); }
+  .arrived-box {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--ok-soft); color: var(--ok); border-radius: 12px; padding: 12px 14px;
+  }
+  .arrived-box svg { width: 26px; height: 26px; flex: none; }
+  .arrived-box .txt { flex: 1; min-width: 0; }
+  .arrived-box b { display: block; font-size: 16px; }
+  .arrived-box small { color: var(--text); opacity: .75; font-size: 13px; }
+  .btn-undo {
+    margin-top: 10px; width: 100%; min-height: 44px; border-radius: 12px; cursor: pointer;
+    background: transparent; border: 1.5px solid var(--line); color: var(--muted); font-weight: 600; font-size: 15px;
+  }
+
+  .storage-warn {
+    background: var(--warn-soft); color: var(--warn); font-size: 13px; border-radius: 10px;
+    padding: 8px 12px; margin-bottom: 12px; display: none;
+  }
+  .storage-warn.show { display: block; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+    background: #17202a; color: #fff; border-radius: 999px; padding: 10px 18px; font-size: 15px;
+    transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="top-row">
+      <div>
+        <h1>Check-in partecipanti</h1>
+        <div class="sub">Evento BPER &middot; Accoglienza arrivi</div>
+      </div>
+      <div class="counter" aria-live="polite"><b id="count">0 / 0</b><span>arrivati</span></div>
+    </div>
+    <div class="demo-note">Demo con dati fittizi. Lo stato "arrivato" resta solo su questo telefono.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="search-bar">
+    <div class="search-box" role="combobox" aria-haspopup="listbox" aria-owns="suggestions" aria-expanded="false" id="combo">
+      <svg class="lens" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <label for="q" class="sr">Cerca partecipante</label>
+      <input id="q" type="search" placeholder="Cerca cognome o nome" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-autocomplete="list" aria-controls="suggestions">
+      <button id="clear" type="button" aria-label="Cancella ricerca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <ul id="suggestions" class="suggestions" role="listbox" aria-label="Suggerimenti"></ul>
+  </div>
+
+  <div id="storageWarn" class="storage-warn">Memoria del browser non disponibile: gli arrivi registrati si perdono chiudendo la pagina.</div>
+  <section id="detail" aria-live="polite"></section>
+</main>
+
+<div id="toast" class="toast" role="status"></div>
+
+<!-- ============================================================
+     DATI PARTECIPANTI (FITTIZI)
+     Stesse colonne del CSV originale: Cognome;Nome;Cellulare;Hotel assegnato;Arrivo;APT/STZ arrivo
+     Per la versione reale basta sostituire il contenuto di questo blocco.
+     ============================================================ -->
+<script id="dati-csv" type="text/plain">
+Cognome;Nome;Cellulare;Hotel assegnato;Arrivo;APT/STZ arrivo
+Albertini;Chiara;123456;Hotel Aurora Boreale;Treno/Aereo;Stazione Valfiorita Centrale
+Bassi;Lorenzo;123456;Albergo Le Tre Querce;Con mezzi propri;
+Benedetti;Giulia;123456;Grand Hotel Belsito;Treno/Aereo;Aeroporto di Pianalto
+Bonetti;Marco;123456;Residenza Gelsomino;Treno/Aereo;Stazione Valfiorita Centrale
+Caputo;Francesca;123456;Hotel Ponte Antico;Con mezzi propri;
+Castelli;Andrea;123456;Hotel Villa Glicine;Treno/Aereo;Aeroporto di Montesereno
+Cattaneo;Elena;123456;Locanda del Faro;Treno/Aereo;Stazione Valfiorita Centrale
+Colombo;Davide;123456;Hotel Stella Polare;Treno/Aereo;Stazione Borgoluce
+Conti;Sara;123456;Hotel Corte dei Mandorli ;Con mezzi propri;
+D'Amico;Nicolò;123456;Palazzo Ventaglio Suites;Treno/Aereo;Stazione Valfiorita Centrale
+De Luca;Federica;123456;Hotel Lungofiume;Treno/Aereo;Aeroporto di Pianalto
+De Santis;Paolo;123456;Hotel Giardino delle Ortensie;Con mezzi propri;
+Esposito;Martina;123456;Casa Lavanda;Treno/Aereo;stazione valfiorita centrale
+Fabbri;Simone;123456;Hotel Quattro Venti;Treno/Aereo;Scalo Riva Nuova
+Ferrari;Alessia;123456;Albergo Collina Serena;Con mezzi propri;
+Fontana;Luca;123456;Locanda del faro;Treno/Aereo;Stazione Valfiorita Centrale
+Galli;Valentina;123456;DEFINIRE HOTEL;Treno/Aereo;Stazione Valfiorita Centrale
+Gatti;Matteo;123456;Hotel Aurora Boreale;;
+Greco;Ilaria;123456;;Treno/Aereo;Stazione Valfiorita Centrale
+Leone;Riccardo;123456;Albergo Le Tre Querce;Treno/Aereo;Aeroporto di Montesereno
+Lo Russo;Beatrice;123456;Grand Hotel belsito;Con mezzi propri;
+Lombardi;Stefano;123456;Residenza Gelsomino;Treno/Aereo;Aeroporto di Pianalto
+Mancini;Roberta;123456;Hotel Ponte antico;Treno/Aereo;Stazione Valfiorita Centrale
+Marchetti;Giorgio;123456;Villa Glicine;Con mezzi propri;
+Mariani;Anna;123456;Locanda del Faro;Treno/Aereo;Stazione Valfiorita Centrale
+Martini;Fabio;123456;Hotel Stella Polare;Treno/Aereo;
+Monti;Laura;123456;Hotel Corte Dei Mandorli;Treno/Aereo;Stazione Valfiorita Centrale
+Morelli;Gabriele;123456;Palazzo Ventaglio Suites;Con mezzi propri;
+Neri;Silvia;123456;Hotel Lungofiume;Treno/Aereo;Stazione Valfiorita Centrale
+Orlando;Emanuele;123456;Hotel Giardino delle Ortensie;Treno/Aereo;Aeroporto di Montesereno
+Pellegrini;Camilla;123456;Casa Lavanda;Treno/Aereo;Stazione Valfiorita Centrale
+Rinaldi;Tommaso;123456;Hotel Aurora Boreale;Con mezzi propri;
+Rizzo;Elisa;123456;Albergo Le Tre Querce;Treno/Aereo;Aeroporto di Pianalto
+Romano;Alberto;123456;Grand Hotel Belsito;Treno/Aereo;Stazione Valfiorita Centrale
+Rossi;Maria Grazia;123456;Residenza Gelsomino;Treno/Aereo;Stazione Valfiorita Centrale
+Sala;Pietro;123456;Hotel Villa Glicine;Con mezzi propri;
+Sartori;Irene;123456;Hotel Quattro Venti;Treno/Aereo;Stazione Valfiorita Centrale
+Testa;Michele;123456;Hotel Ponte Antico;Treno/Aereo;Stazione Borgoluce
+Valentini;Chiara;123456;Locanda del Faro;Con mezzi propri;
+Villa;Gianluca;123456;Hotel Stella Polare;Treno/Aereo;Stazione Valfiorita Centrale
+</script>
+<!-- ======================= FINE DATI ======================= -->
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Normalizzazione valori ---------- */
+  var HOTELS = [
+    "Hotel Aurora Boreale", "Albergo Le Tre Querce", "Grand Hotel Belsito",
+    "Residenza Gelsomino", "Hotel Ponte Antico", "Hotel Villa Glicine",
+    "Locanda del Faro", "Hotel Stella Polare", "Hotel Corte dei Mandorli",
+    "Palazzo Ventaglio Suites", "Hotel Lungofiume", "Hotel Giardino delle Ortensie",
+    "Casa Lavanda", "Hotel Quattro Venti", "Albergo Collina Serena"
+  ];
+  var STATIONS = ["Stazione Valfiorita Centrale", "Stazione Borgoluce", "Aeroporto di Pianalto", "Aeroporto di Montesereno", "Scalo Riva Nuova"];
+
+  function fold(s) {
+    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .toLowerCase().replace(/[’']/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function canonical(value, list) {
+    var v = fold(value).replace(/^hotel /, "");
+    if (!v) return "";
+    for (var i = 0; i < list.length; i++) {
+      if (fold(list[i]).replace(/^hotel /, "") === v) return list[i];
+    }
+    return String(value).trim();
+  }
+
+  /* ---------- Lettura dati ---------- */
+  var lines = document.getElementById("dati-csv").textContent.split(/\r?\n/).filter(function (l) { return l.trim(); });
+  var header = lines.shift().split(";").map(function (h) { return h.trim(); });
+  var people = lines.map(function (line, idx) {
+    var cells = line.split(";");
+    var raw = {};
+    header.forEach(function (h, i) { raw[h] = (cells[i] || "").trim(); });
+    var p = {
+      raw: raw,
+      cognome: raw["Cognome"],
+      nome: raw["Nome"],
+      cell: raw["Cellulare"],
+      hotel: canonical(raw["Hotel assegnato"], HOTELS),
+      arrivo: raw["Arrivo"],
+      stz: canonical(raw["APT/STZ arrivo"], STATIONS)
+    };
+    p.id = fold(p.cognome + "|" + p.nome + "|" + p.cell) || ("riga-" + idx);
+    p.words = fold(p.cognome + " " + p.nome).split(" ");
+    p.full = fold(p.cognome + " " + p.nome);
+    return p;
+  }).sort(function (a, b) {
+    return a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it");
+  });
+
+  /* ---------- Stato arrivi (solo browser locale) ---------- */
+  var STORE_KEY = "checkin-bper-demo-arrivi-v1";
+  var arrivals = {};
+  var storageOk = true;
+  try {
+    arrivals = JSON.parse(window.localStorage.getItem(STORE_KEY) || "{}") || {};
+    window.localStorage.setItem(STORE_KEY + "-test", "1");
+    window.localStorage.removeItem(STORE_KEY + "-test");
+  } catch (e) {
+    storageOk = false;
+    arrivals = {};
+  }
+  function save() {
+    if (!storageOk) return;
+    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(arrivals)); }
+    catch (e) { storageOk = false; showStorageWarn(); }
+  }
+  function showStorageWarn() { document.getElementById("storageWarn").classList.add("show"); }
+  if (!storageOk) showStorageWarn();
+
+  /* ---------- Utilità DOM ---------- */
+  var $q = document.getElementById("q");
+  var $list = document.getElementById("suggestions");
+  var $detail = document.getElementById("detail");
+  var $clear = document.getElementById("clear");
+  var $combo = document.getElementById("combo");
+  var $count = document.getElementById("count");
+  var $toast = document.getElementById("toast");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  var ICON = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    checkCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
+  };
+
+  function updateCount() {
+    var n = people.filter(function (p) { return arrivals[p.id]; }).length;
+    $count.textContent = n + " / " + people.length;
+  }
+  var toastTimer;
+  function toast(msg) {
+    $toast.textContent = msg;
+    $toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { $toast.classList.remove("show"); }, 1800);
+  }
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }) + " alle " +
+      d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  /* ---------- Ricerca ---------- */
+  // Ogni parola digitata deve essere l'inizio di una parola di cognome o nome,
+  // in qualsiasi ordine ("rossi maria" e "maria rossi" trovano la stessa persona).
+  function search(query) {
+    var terms = fold(query).split(" ").filter(Boolean);
+    if (!terms.length) return [];
+    var joined = terms.join("");
+    return people.filter(function (p) {
+      var used = [];
+      var byWords = terms.every(function (t) {
+        for (var i = 0; i < p.words.length; i++) {
+          if (used.indexOf(i) === -1 && p.words[i].indexOf(t) === 0) { used.push(i); return true; }
+        }
+        return false;
+      });
+      // ammette anche il cognome scritto senza spazi o apostrofo (es. "delu" per De Luca, "damico" per D'Amico)
+      return byWords || p.full.replace(/ /g, "").indexOf(joined) === 0;
+    });
+  }
+  function highlight(text, terms) {
+    // Evidenzia l'inizio delle parole che corrispondono, ignorando accenti e maiuscole.
+    var parts = String(text).split(/(\s+|['’])/);
+    return parts.map(function (part) {
+      var f = fold(part);
+      if (!f) return esc(part);
+      for (var i = 0; i < terms.length; i++) {
+        if (terms[i] && f.indexOf(terms[i]) === 0) {
+          var n = terms[i].length;
+          return "<mark>" + esc(part.slice(0, n)) + "</mark>" + esc(part.slice(n));
+        }
+      }
+      return esc(part);
+    }).join("");
+  }
+
+  var results = [];
+  var active = -1;
+  var MAX = 8;
+
+  function renderSuggestions() {
+    var query = $q.value;
+    $clear.classList.toggle("show", query.length > 0);
+    // Mentre i suggerimenti sono aperti la scheda sotto resta nascosta, per non confondere.
+    $detail.hidden = !!fold(query);
+    if (!fold(query)) {
+      $list.innerHTML = "";
+      $combo.setAttribute("aria-expanded", "false");
+      return;
+    }
+    results = search(query);
+    var terms = fold(query).split(" ").filter(Boolean);
+    if (!results.length) {
+      $list.innerHTML = '<li class="empty">Nessun partecipante trovato per &laquo;' + esc(query.trim()) + '&raquo;</li>';
+      $combo.setAttribute("aria-expanded", "true");
+      return;
+    }
+    var shown = results.slice(0, MAX);
+    $list.innerHTML = shown.map(function (p, i) {
+      var hotel = !p.hotel ? "Hotel non indicato" : fold(p.hotel) === "definire hotel" ? "Hotel da definire" : p.hotel;
+      var meta = [hotel, p.stz || p.arrivo].filter(Boolean).join(" · ");
+      var pill = arrivals[p.id] ? '<span class="pill ok">Arrivato</span>' : '<span class="pill todo">Da accogliere</span>';
+      return '<li><button type="button" class="sugg" role="option" id="opt-' + i + '" data-i="' + i + '" aria-selected="' + (i === active) + '">' +
+        '<span class="who"><span class="name">' + highlight(p.cognome, terms) + " " + highlight(p.nome, terms) + '</span>' +
+        '<span class="meta">' + esc(meta) + '</span></span>' + pill + '</button></li>';
+    }).join("") + (results.length > MAX
+      ? '<li class="empty" style="padding:10px 14px;font-size:13px">Altri ' + (results.length - MAX) + ' risultati: continua a scrivere per restringere</li>'
+      : "");
+    $combo.setAttribute("aria-expanded", "true");
+  }
+
+  function setActive(i) {
+    var max = Math.min(results.length, MAX) - 1;
+    active = Math.max(-1, Math.min(i, max));
+    Array.prototype.forEach.call($list.querySelectorAll(".sugg"), function (el, k) {
+      el.setAttribute("aria-selected", String(k === active));
+      if (k === active) el.scrollIntoView({ block: "nearest" });
+    });
+    if (active >= 0) $q.setAttribute("aria-activedescendant", "opt-" + active);
+    else $q.removeAttribute("aria-activedescendant");
+  }
+
+  function choose(p) {
+    $q.value = p.cognome + " " + p.nome;
+    $clear.classList.add("show");
+    $list.innerHTML = "";
+    $combo.setAttribute("aria-expanded", "false");
+    $detail.hidden = false;
+    active = -1;
+    $q.blur();
+    renderDetail(p);
+    window.scrollTo({ top: 0 });
+  }
+
+  /* ---------- Scheda partecipante ---------- */
+  var current = null;
+
+  function fieldRow(label, valueHtml, isBlank) {
+    return '<div class="field"><dt>' + esc(label) + '</dt><dd' + (isBlank ? ' class="blank"' : "") + ">" + valueHtml + "</dd></div>";
+  }
+  function telHref(raw) {
+    var first = raw.split(/[^\d\s+./-]/)[0] || raw; // eventuali più numeri: usa il primo
+    var digits = first.replace(/[^\d+]/g, "");
+    if (!digits) return "";
+    if (digits[0] !== "+" && digits.length >= 9 && digits.length <= 10) digits = "+39" + digits;
+    return "tel:" + digits;
+  }
+  function fmtPhone(raw) {
+    var d = raw.replace(/[^\d]/g, "");
+    if (d.length === 10 && d[0] === "3") return d.slice(0, 3) + " " + d.slice(3, 6) + " " + d.slice(6);
+    return raw;
+  }
+
+  function renderDetail(p) {
+    current = p;
+    if (!p) {
+      $detail.innerHTML = '<div class="hint">' + ICON.search + 'Scrivi il cognome o il nome del partecipante per aprire la sua scheda.</div>';
+      return;
+    }
+    var arrived = arrivals[p.id];
+    var initials = (p.nome.charAt(0) + p.cognome.charAt(0)).toUpperCase();
+    var NA = "Non indicato";
+
+    var hotelHtml, hotelBlank = false;
+    if (!p.hotel) { hotelHtml = NA; hotelBlank = true; }
+    else if (fold(p.hotel) === "definire hotel") hotelHtml = '<span class="pill warn">Da definire</span>';
+    else hotelHtml = esc(p.hotel);
+
+    var tel = p.cell ? telHref(p.cell) : "";
+    var cellHtml = p.cell
+      ? (tel ? '<a class="tel" href="' + esc(tel) + '">' + ICON.phone + esc(fmtPhone(p.cell)) + "</a>" : esc(p.cell))
+      : NA;
+
+    var html =
+      '<article class="card">' +
+        '<div class="card-head"><div class="avatar" aria-hidden="true">' + esc(initials) + '</div>' +
+          '<div class="title"><h2>' + esc(p.cognome) + " " + esc(p.nome) + "</h2>" +
+          '<div class="status-line">' + (arrived ? '<span class="pill ok">Arrivato</span>' : '<span class="pill todo">Da accogliere</span>') + "</div></div></div>" +
+        '<dl class="fields">' +
+          fieldRow("Cognome", esc(p.cognome)) +
+          fieldRow("Nome", esc(p.nome)) +
+          fieldRow("Cellulare", cellHtml, !p.cell) +
+          fieldRow("Hotel assegnato", hotelHtml, hotelBlank) +
+          fieldRow("Arrivo", p.arrivo ? esc(p.arrivo) : NA, !p.arrivo) +
+          fieldRow("APT/STZ arrivo", p.stz ? esc(p.stz) : (fold(p.arrivo) === "con mezzi propri" ? "Non previsto (mezzi propri)" : NA), !p.stz) +
+        "</dl>" +
+        '<div class="lock">' + ICON.lock + "Dati in sola lettura. Si può modificare solo l'arrivo.</div>" +
+        '<div class="action">' +
+          (arrived
+            ? '<div class="arrived-box">' + ICON.checkCircle + '<div class="txt"><b>Arrivato</b><small>Registrato il ' + esc(fmtTime(arrived)) + "</small></div></div>" +
+              '<button type="button" class="btn-undo" id="undo">Annulla: segna come non arrivato</button>'
+            : '<button type="button" class="btn-arrive" id="arrive">' + ICON.check + "Segna come arrivato</button>") +
+        "</div>" +
+      "</article>";
+    $detail.innerHTML = html;
+
+    var btn = document.getElementById("arrive");
+    if (btn) btn.addEventListener("click", function () {
+      arrivals[p.id] = Date.now();
+      save(); updateCount(); renderDetail(p);
+      toast(p.cognome + " " + p.nome + ": arrivato");
+    });
+    var undo = document.getElementById("undo");
+    if (undo) undo.addEventListener("click", function () {
+      if (!window.confirm("Segnare " + p.cognome + " " + p.nome + " come NON arrivato?")) return;
+      delete arrivals[p.id];
+      save(); updateCount(); renderDetail(p);
+      toast("Arrivo annullato");
+    });
+  }
+
+  /* ---------- Eventi ---------- */
+  $q.addEventListener("input", function () { active = -1; renderSuggestions(); });
+  $q.addEventListener("focus", function () { if ($q.value) renderSuggestions(); });
+  $q.addEventListener("keydown", function (e) {
+    var count = Math.min(results.length, MAX);
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive(active + 1 >= count ? 0 : active + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(active <= 0 ? count - 1 : active - 1); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (!$list.querySelector(".sugg")) return;
+      choose(results[active >= 0 ? active : 0]);
+    } else if (e.key === "Escape") { $list.innerHTML = ""; $combo.setAttribute("aria-expanded", "false"); $detail.hidden = false; }
+  });
+  $list.addEventListener("click", function (e) {
+    var b = e.target.closest(".sugg");
+    if (b) choose(results[+b.getAttribute("data-i")]);
+  });
+  $clear.addEventListener("click", function () {
+    $q.value = ""; renderSuggestions(); renderDetail(null); $q.focus();
+  });
+  // Aggiorna se un'altra scheda dello stesso browser registra un arrivo.
+  window.addEventListener("storage", function (e) {
+    if (e.key !== STORE_KEY) return;
+    try { arrivals = JSON.parse(e.newValue || "{}") || {}; } catch (err) { arrivals = {}; }
+    updateCount(); if (current) renderDetail(current);
+  });
+
+  updateCount();
+  renderDetail(null);
+})();
+</script>
+</body>
+</html>

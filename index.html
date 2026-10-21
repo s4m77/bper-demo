@@ -50,7 +50,7 @@
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
   }
-  button, input { font: inherit; color: inherit; }
+  button, input, select { font: inherit; color: inherit; }
   .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
 
   /* Header */
@@ -201,6 +201,53 @@
     overflow: hidden; text-overflow: ellipsis;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  /* Navigazione tra le sezioni */
+  .tabs {
+    display: flex; gap: 4px; margin-top: 12px; padding: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .tab {
+    flex: 1; min-width: 0; min-height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--muted); font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab svg { width: 18px; height: 18px; flex: none; }
+  .tab[aria-current="page"] { background: var(--brand); color: var(--surface); }
+  .storage-warn { margin: 12px 0 0; }
+
+  /* Dashboard */
+  .dash { padding: 12px 0 24px; }
+  .dash-total { padding: 16px 18px 18px; margin-bottom: 16px; }
+  .dash-total .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .dash-total .big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .dash-total .pct { font-size: 34px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dash-total .of { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+  .bar { height: 10px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; }
+  .bar span { display: block; height: 100%; border-radius: inherit; background: var(--ok); transition: width .3s; }
+  .dash-total .bar { height: 12px; }
+  .dash-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .dash-controls label { flex: none; font-size: 14px; color: var(--muted); font-weight: 600; }
+  #groupBy {
+    flex: 1; min-width: 0; height: 44px; font-size: 16px; /* >= 16px: niente zoom su iPhone */
+    border: 1.5px solid var(--line); border-radius: 12px; background-color: var(--surface);
+    padding: 0 36px 0 12px; outline: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f6b7a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 18px;
+  }
+  #groupBy:focus { border-color: var(--brand); }
+  .dash-list { list-style: none; margin: 0 0 12px; padding: 0 18px; }
+  .drow { padding: 12px 0; }
+  .drow + .drow { border-top: 1px solid var(--line); }
+  .drow-top { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+  .drow .dname { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .drow .dname.blank { color: var(--muted); font-style: italic; font-weight: 500; }
+  .drow .dnum { flex: none; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .drow .dnum b { color: var(--text); font-size: 16px; }
+  .drow.done .dnum b, .drow.done .dnum .p { color: var(--ok); }
+  .dash-note { color: var(--muted); font-size: 13px; text-align: center; margin: 0; padding: 0 8px; }
+
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
@@ -220,6 +267,13 @@
 </header>
 
 <main class="wrap">
+  <nav class="tabs" aria-label="Sezioni">
+    <a class="tab" id="tabSearch" href="#cerca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Check-in</a>
+    <a class="tab" id="tabDash" href="#dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h16M7 16v-4M12 16V6M17 16v-7"/></svg>Dashboard</a>
+  </nav>
+  <div id="storageWarn" class="storage-warn">Memoria del browser non disponibile: gli arrivi registrati si perdono chiudendo la pagina.</div>
+
+  <div id="viewSearch">
   <div class="search-bar">
     <div class="search-box" role="combobox" aria-haspopup="listbox" aria-owns="suggestions" aria-expanded="false" id="combo">
       <svg class="lens" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -230,8 +284,23 @@
     <ul id="suggestions" class="suggestions" role="listbox" aria-label="Suggerimenti"></ul>
   </div>
 
-  <div id="storageWarn" class="storage-warn">Memoria del browser non disponibile: gli arrivi registrati si perdono chiudendo la pagina.</div>
   <section id="detail" aria-live="polite"></section>
+  </div>
+
+  <section id="viewDash" class="dash" hidden aria-labelledby="dashTitle">
+    <h2 id="dashTitle" class="sr">Dashboard arrivi</h2>
+    <div class="card dash-total">
+      <div class="lbl">Totale arrivati</div>
+      <div class="big"><span class="pct" id="dashPct">0%</span><span class="of" id="dashOf"></span></div>
+      <div class="bar" id="dashBar" role="progressbar" aria-label="Totale arrivati" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+    </div>
+    <div class="dash-controls">
+      <label for="groupBy">Raggruppa per</label>
+      <select id="groupBy"></select>
+    </div>
+    <ul class="card dash-list" id="dashList"></ul>
+    <p class="dash-note">Si aggiorna da solo con gli arrivi registrati su questo telefono.</p>
+  </section>
 </main>
 
 <div id="toast" class="toast" role="status"></div>
@@ -365,6 +434,9 @@ Villa;Gianluca;123456;Hotel Stella Polare;Treno/Aereo;Stazione Valfiorita Centra
   var $combo = document.getElementById("combo");
   var $count = document.getElementById("count");
   var $toast = document.getElementById("toast");
+  var $viewSearch = document.getElementById("viewSearch");
+  var $viewDash = document.getElementById("viewDash");
+  var $groupBy = document.getElementById("groupBy");
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -382,6 +454,7 @@ Villa;Gianluca;123456;Hotel Stella Polare;Treno/Aereo;Stazione Valfiorita Centra
   function updateCount() {
     var n = people.filter(function (p) { return arrivals[p.id]; }).length;
     $count.textContent = n + " / " + people.length;
+    if (!$viewDash.hidden) renderDashboard();
   }
   var toastTimer;
   function toast(msg) {
@@ -566,6 +639,97 @@ Villa;Gianluca;123456;Hotel Stella Polare;Treno/Aereo;Stazione Valfiorita Centra
     });
   }
 
+  /* ---------- Dashboard: percentuale arrivati raggruppata per colonna ---------- */
+  // Funziona su qualsiasi colonna del CSV: una nuova colonna compare da sola nel menu
+  // "Raggruppa per" se ha da 2 valori distinti fino a metà del numero di partecipanti
+  // (esclude così nomi, cognomi e cellulari, che sono quasi tutti diversi).
+  // Le colonne con un elenco di valori noti vengono normalizzate come nella scheda.
+  var CANON = { "Hotel assegnato": HOTELS, "APT/STZ arrivo": STATIONS };
+  var DEFAULT_GROUP = "Hotel assegnato";
+  var GROUP_KEY = STORE_KEY + "-raggruppa";
+
+  function groupValue(p, col) {
+    var v = p.raw[col] || "";
+    return CANON[col] ? canonical(v, CANON[col]) : v.trim();
+  }
+  var groupable = header.filter(function (col) {
+    var seen = {}, n = 0;
+    people.forEach(function (p) {
+      var k = fold(groupValue(p, col));
+      if (k && !seen[k]) { seen[k] = true; n++; }
+    });
+    return n >= 2 && n <= Math.max(2, Math.ceil(people.length / 2));
+  });
+  $groupBy.innerHTML = groupable.map(function (col) {
+    return '<option value="' + esc(col) + '">' + esc(col) + "</option>";
+  }).join("");
+  var savedGroup = null;
+  try { savedGroup = window.localStorage.getItem(GROUP_KEY); } catch (e) { /* memoria non disponibile */ }
+  $groupBy.value = groupable.indexOf(savedGroup) >= 0 ? savedGroup
+    : groupable.indexOf(DEFAULT_GROUP) >= 0 ? DEFAULT_GROUP : (groupable[0] || "");
+
+  function pct(n, total) { return total ? Math.round(n / total * 100) : 0; }
+  function barHtml(p, label) {
+    return '<div class="bar" role="progressbar" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + p + '"><span style="width:' + p + '%"></span></div>';
+  }
+
+  function renderDashboard() {
+    var total = people.length;
+    var arrived = people.filter(function (p) { return arrivals[p.id]; }).length;
+    var tp = pct(arrived, total);
+    document.getElementById("dashPct").textContent = tp + "%";
+    document.getElementById("dashOf").textContent = arrived + " di " + total + " partecipanti";
+    var $bar = document.getElementById("dashBar");
+    $bar.setAttribute("aria-valuenow", tp);
+    $bar.firstChild.style.width = tp + "%";
+
+    var col = $groupBy.value;
+    var groups = {}, order = [];
+    people.forEach(function (p) {
+      var v = col ? groupValue(p, col) : "";
+      var k = fold(v);
+      var g = groups[k];
+      if (!g) { g = groups[k] = { key: k, total: 0, arrived: 0, spellings: {} }; order.push(g); }
+      g.total++;
+      if (arrivals[p.id]) g.arrived++;
+      g.spellings[v] = (g.spellings[v] || 0) + 1;
+    });
+    order.forEach(function (g) {
+      // Etichetta: la grafia più frequente tra le varianti dello stesso valore.
+      var best = "", max = 0;
+      Object.keys(g.spellings).forEach(function (s) { if (g.spellings[s] > max) { max = g.spellings[s]; best = s; } });
+      g.placeholder = !g.key ? "Non indicato" : /^(da )?definire\b/.test(g.key) ? "Da definire" : "";
+      g.label = g.placeholder || best;
+    });
+    order.sort(function (a, b) {
+      return (!!a.placeholder - !!b.placeholder) || a.label.localeCompare(b.label, "it");
+    });
+    document.getElementById("dashList").innerHTML = order.map(function (g) {
+      var p = pct(g.arrived, g.total);
+      return '<li class="drow' + (g.total && g.arrived === g.total ? " done" : "") + '">' +
+        '<div class="drow-top"><span class="dname' + (g.placeholder ? " blank" : "") + '">' + esc(g.label) + "</span>" +
+        '<span class="dnum"><b>' + g.arrived + "</b> / " + g.total + ' &middot; <span class="p">' + p + "%</span></span></div>" +
+        barHtml(p, g.label) + "</li>";
+    }).join("");
+  }
+  $groupBy.addEventListener("change", function () {
+    try { window.localStorage.setItem(GROUP_KEY, $groupBy.value); } catch (e) { /* memoria non disponibile */ }
+    renderDashboard();
+  });
+
+  /* ---------- Navigazione: #cerca (predefinita) e #dashboard ---------- */
+  function route() {
+    var dash = window.location.hash === "#dashboard";
+    $viewSearch.hidden = dash;
+    $viewDash.hidden = !dash;
+    document.getElementById("tabSearch").toggleAttribute("aria-current", false);
+    document.getElementById("tabDash").toggleAttribute("aria-current", false);
+    document.getElementById(dash ? "tabDash" : "tabSearch").setAttribute("aria-current", "page");
+    if (dash) renderDashboard();
+    window.scrollTo({ top: 0 });
+  }
+  window.addEventListener("hashchange", route);
+
   /* ---------- Eventi ---------- */
   $q.addEventListener("input", function () { active = -1; renderSuggestions(); });
   $q.addEventListener("focus", function () { if ($q.value) renderSuggestions(); });
@@ -595,6 +759,7 @@ Villa;Gianluca;123456;Hotel Stella Polare;Treno/Aereo;Stazione Valfiorita Centra
 
   updateCount();
   renderDetail(null);
+  route();
 })();
 </script>
 </body>
